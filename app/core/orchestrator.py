@@ -53,7 +53,7 @@ def run_security_analysis(
             )
         )
 
-    # This reproduction is limited to the project's controlled fixtures.
+    # Reproduction is limited to the project's controlled fixtures.
     try:
         controlled_reproduction = reproduce_access_control()
     except Exception as exc:
@@ -65,10 +65,16 @@ def run_security_analysis(
             "execution_scope": "controlled_project_fixtures",
         }
 
-    # Only execute the controlled patch demonstration when analyzing the
-    # actual SecuritySense project root. Never run this workflow on an
-    # arbitrary submitted repository.
     project_root = Path(__file__).resolve().parents[2]
+    fixtures_dir = (project_root / "tests" / "fixtures").resolve()
+
+    # Run the fix demonstration only for explicitly trusted project paths.
+    # Never run this workflow against an arbitrary submitted workspace.
+    approved_workspaces = {
+        project_root.resolve(),
+        fixtures_dir,
+    }
+
     fix_workflow: dict[str, Any] = {
         "patch_status": "unrun",
         "application_status": "unrun",
@@ -77,11 +83,12 @@ def run_security_analysis(
             "verified": False,
         },
         "original_modified": False,
-        "reason": "Controlled fix workflow has not been run.",
+        "reason": "Controlled access-control demo has not been run.",
+        "scope": "controlled_access_control_fixture",
     }
 
-    if workspace_path == project_root:
-        source_fixture = project_root / "tests" / "fixtures" / "vulnerable_app.py"
+    if workspace_path in approved_workspaces:
+        source_fixture = fixtures_dir / "vulnerable_app.py"
         test_fixture = project_root / "tests" / "test_access_control.py"
 
         try:
@@ -89,6 +96,7 @@ def run_security_analysis(
                 source=source_fixture,
                 test_file=test_fixture,
             )
+            fix_workflow["scope"] = "controlled_access_control_fixture"
         except Exception as exc:
             fix_workflow = {
                 "patch_status": "inconclusive",
@@ -100,6 +108,7 @@ def run_security_analysis(
                 },
                 "original_modified": False,
                 "error": f"{type(exc).__name__}: {exc}",
+                "scope": "controlled_access_control_fixture",
             }
 
     verification = fix_workflow.get("verification") or {}

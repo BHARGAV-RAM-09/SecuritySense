@@ -30,14 +30,20 @@ async function apiRequest(path, options = {}) {
     let data = null;
 
     if (contentType.includes("application/json")) {
-        data = await response.json();
+        try {
+            data = await response.json();
+        } catch {
+            throw new Error("The server returned an invalid JSON response.");
+        }
     }
 
     if (!response.ok) {
         const detail = data?.detail;
-        const message = typeof detail === "string"
-            ? detail
-            : `Request failed with HTTP ${response.status}.`;
+        const message =
+            typeof detail === "string"
+                ? detail
+                : `Request failed with HTTP ${response.status}.`;
+
         throw new Error(message);
     }
 
@@ -53,21 +59,30 @@ function setApiStatus(status, online) {
     const statusText = document.getElementById("api-status");
     const dot = document.querySelector(".status-dot");
 
-    statusText.textContent = status;
-    dot.classList.toggle("online", online);
-    dot.classList.toggle("offline", !online);
+    if (statusText) {
+        statusText.textContent = status;
+    }
+
+    if (dot) {
+        dot.classList.toggle("online", online);
+        dot.classList.toggle("offline", !online);
+    }
 }
 
 async function checkApiStatus() {
     try {
         const result = await apiRequest("/status");
-        setApiStatus(result.status === "ready" ? "API online" : "API responding", true);
+
+        setApiStatus(
+            result?.status === "ready" ? "API online" : "API responding",
+            true
+        );
     } catch {
         setApiStatus("API unavailable", false);
     }
 }
 
-function createElement(tag, className, text) {
+function createElement(tag, className = "", text) {
     const element = document.createElement(tag);
 
     if (className) {
@@ -91,7 +106,10 @@ function formatStatus(status) {
 
 function statusClass(status) {
     const allowed = ["passed", "failed", "unrun", "inconclusive"];
-    return allowed.includes(status) ? `status-${status}` : "status-inconclusive";
+
+    return allowed.includes(status)
+        ? `status-${status}`
+        : "status-inconclusive";
 }
 
 function addMetadata(container, label, value) {
@@ -112,7 +130,11 @@ function renderFindings(findings) {
 
     if (!findings.length) {
         findingsList.appendChild(
-            createElement("p", "muted", "No candidate findings were reported by the scanner.")
+            createElement(
+                "p",
+                "muted",
+                "No candidate findings were reported by the scanner."
+            )
         );
         return;
     }
@@ -120,11 +142,32 @@ function renderFindings(findings) {
     for (const finding of findings) {
         const card = createElement("article", "finding-card");
         const topLine = createElement("div", "finding-topline");
-        const rule = createElement("span", "rule-id", finding.rule_id || "Unknown rule");
-        const severityValue = String(finding.severity || "unknown").toLowerCase();
+
+        const rule = createElement(
+            "span",
+            "rule-id",
+            finding.rule_id || "Unknown rule"
+        );
+
+        const severityValue = String(
+            finding.severity || "unknown"
+        ).toLowerCase();
+
+        const allowedSeverities = [
+            "critical",
+            "high",
+            "medium",
+            "low",
+            "unknown",
+        ];
+
+        const safeSeverity = allowedSeverities.includes(severityValue)
+            ? severityValue
+            : "unknown";
+
         const severity = createElement(
             "span",
-            `severity severity-${severityValue}`,
+            `severity severity-${safeSeverity}`,
             finding.severity || "Unknown severity"
         );
 
@@ -137,6 +180,7 @@ function renderFindings(findings) {
         );
 
         const metadata = createElement("div", "metadata");
+
         addMetadata(metadata, "Tool", finding.tool);
         addMetadata(metadata, "Confidence", finding.confidence);
         addMetadata(metadata, "File", finding.file);
@@ -145,8 +189,9 @@ function renderFindings(findings) {
         card.append(topLine, message, metadata);
 
         if (finding.code) {
-            const source = createElement("code", "source-code", finding.code);
-            card.appendChild(source);
+            card.appendChild(
+                createElement("code", "source-code", finding.code)
+            );
         }
 
         findingsList.appendChild(card);
@@ -158,7 +203,11 @@ function renderInvestigations(investigations) {
 
     if (!investigations.length) {
         investigationsList.appendChild(
-            createElement("p", "muted", "No investigation records are available.")
+            createElement(
+                "p",
+                "muted",
+                "No investigation records are available."
+            )
         );
         return;
     }
@@ -166,23 +215,29 @@ function renderInvestigations(investigations) {
     for (const investigation of investigations) {
         const card = createElement("article", "investigation-card");
         const finding = investigation.finding || {};
+
         const title = createElement(
             "h3",
             "",
-            `${finding.rule_id || "Finding"} — ${finding.file || "Unknown file"}`
+            `${finding.rule_id || "Finding"} — ${finding.file || "Unknown file"
+            }`
         );
 
         card.appendChild(title);
 
         const status = investigation.investigation_status || "unknown";
+
         const statusPill = createElement(
             "span",
             `status-pill ${statusClass(status)}`,
             formatStatus(status)
         );
+
         card.appendChild(statusPill);
 
-        const assessment = investigation.assessment || investigation.summary;
+        const assessment =
+            investigation.assessment || investigation.summary;
+
         if (assessment) {
             card.appendChild(createElement("p", "", assessment));
         }
@@ -192,16 +247,19 @@ function renderInvestigations(investigations) {
             : [];
 
         if (evidence.length) {
-            const evidenceTitle = createElement("p", "", "Collected evidence:");
-            card.appendChild(evidenceTitle);
+            card.appendChild(
+                createElement("p", "", "Collected evidence:")
+            );
 
             const list = document.createElement("ul");
 
             for (const item of evidence) {
-                const text = typeof item === "string"
-                    ? item
-                    : JSON.stringify(item);
-                list.appendChild(createElement("li", "", text));
+                const evidenceText =
+                    typeof item === "string"
+                        ? item
+                        : JSON.stringify(item);
+
+                list.appendChild(createElement("li", "", evidenceText));
             }
 
             card.appendChild(list);
@@ -212,27 +270,45 @@ function renderInvestigations(investigations) {
 }
 
 function renderProofLoop(report) {
-    const findings = Array.isArray(report.findings) ? report.findings : [];
+    const findings = Array.isArray(report.findings)
+        ? report.findings
+        : [];
+
     const investigations = Array.isArray(report.investigations)
         ? report.investigations
         : [];
 
     const stages = [
-        ["proof-find", findings.length ? "Findings detected" : "No findings reported"],
+        [
+            "proof-find",
+            findings.length
+                ? "Findings detected"
+                : "No findings reported",
+        ],
         [
             "proof-investigate",
             `${report.investigations_completed ?? investigations.length} completed`,
         ],
-        ["proof-reproduce", report.reproduction_status || "unrun"],
+        [
+            "proof-reproduce",
+            formatStatus(report.reproduction_status || "unrun"),
+        ],
         [
             "proof-verify",
-            `Fix: ${report.fix_status || "unrun"} · Verify: ${report.verification_status || "unrun"}`,
+            `Demo fix: ${formatStatus(
+                report.fix_status || "unrun"
+            )} · Verify: ${formatStatus(
+                report.verification_status || "unrun"
+            )}`,
         ],
     ];
 
     for (const [id, value] of stages) {
         const element = document.getElementById(id);
-        element.textContent = value;
+
+        if (element) {
+            element.textContent = value;
+        }
     }
 
     document.getElementById("stat-findings").textContent =
@@ -242,25 +318,44 @@ function renderProofLoop(report) {
         `${report.files_scanned ?? 0} / ${report.files_discovered ?? 0}`;
 
     document.getElementById("stat-investigations").textContent =
-        `${report.investigations_completed ?? investigations.length}`;
+        report.investigations_completed ?? investigations.length;
 
     const status = document.getElementById("stat-status");
+
     status.textContent = formatStatus(report.scan_status);
     status.className = `status-value ${statusClass(report.scan_status)}`;
 }
 
 async function loadScan(scanId) {
-    const report = await apiRequest(`/scans/${encodeURIComponent(scanId)}`);
+    const report = await apiRequest(
+        `/scans/${encodeURIComponent(scanId)}`
+    );
+
+    if (!report || typeof report !== "object") {
+        throw new Error("The server returned an invalid scan report.");
+    }
+
     currentReport = report;
     currentScanId = scanId;
 
     renderProofLoop(report);
-    renderFindings(Array.isArray(report.findings) ? report.findings : []);
-    renderInvestigations(Array.isArray(report.investigations) ? report.investigations : []);
+
+    renderFindings(
+        Array.isArray(report.findings) ? report.findings : []
+    );
+
+    renderInvestigations(
+        Array.isArray(report.investigations)
+            ? report.investigations
+            : []
+    );
 
     rawReport.textContent = JSON.stringify(report, null, 2);
     resultsSection.hidden = false;
-    resultsSection.scrollIntoView({ behavior: "smooth", block: "start" });
+    resultsSection.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+    });
 }
 
 scanForm.addEventListener("submit", async (event) => {
@@ -268,13 +363,20 @@ scanForm.addEventListener("submit", async (event) => {
 
     scanButton.disabled = true;
     scanButtonText.textContent = "Analysis running...";
-    setMessage("Running the configured demonstration scan. Please wait.");
+
+    setMessage(
+        "Running the configured demonstration scan. Please wait."
+    );
 
     try {
         const payload = {
             workspace_name: document.getElementById("workspace").value,
-            max_files: Number(document.getElementById("max-files").value),
-            context_lines: Number(document.getElementById("context-lines").value),
+            max_files: Number(
+                document.getElementById("max-files").value
+            ),
+            context_lines: Number(
+                document.getElementById("context-lines").value
+            ),
         };
 
         const created = await apiRequest("/scans", {
@@ -282,13 +384,23 @@ scanForm.addEventListener("submit", async (event) => {
             body: JSON.stringify(payload),
         });
 
+        if (!created?.scan_id) {
+            throw new Error("The server did not return a scan ID.");
+        }
+
         await loadScan(created.scan_id);
+
         setMessage(
-            `Scan finished: ${created.scan_status}. ${created.findings_count} finding(s) reported.`,
+            `Scan finished: ${formatStatus(
+                created.scan_status
+            )}. ${created.findings_count} finding(s) reported.`,
             "success"
         );
     } catch (error) {
-        setMessage(error.message || "The scan could not be completed.", "error");
+        setMessage(
+            error.message || "The scan could not be completed.",
+            "error"
+        );
     } finally {
         scanButton.disabled = false;
         scanButtonText.textContent = "Run security analysis";
@@ -307,54 +419,74 @@ refreshButton.addEventListener("click", async () => {
         await loadScan(currentScanId);
         setMessage("Results refreshed.", "success");
     } catch (error) {
-        setMessage(error.message || "Could not refresh results.", "error");
+        setMessage(
+            error.message || "Could not refresh results.",
+            "error"
+        );
     } finally {
         refreshButton.disabled = false;
     }
 });
 
-document.getElementById("download-report").addEventListener("click", async () => {
-    if (!currentScanId || !currentReport) {
-        setMessage("Run a scan before downloading a report.", "error");
-        return;
-    }
+document
+    .getElementById("download-report")
+    .addEventListener("click", async () => {
+        if (!currentScanId || !currentReport) {
+            setMessage(
+                "Run a scan before downloading a report.",
+                "error"
+            );
+            return;
+        }
 
-    const button = document.getElementById("download-report");
-    button.disabled = true;
+        const button = document.getElementById("download-report");
+        button.disabled = true;
 
-    try {
-        const reportSummary = await apiRequest(
-            `/scans/${encodeURIComponent(currentScanId)}/report`
-        );
+        try {
+            const reportSummary = await apiRequest(
+                `/scans/${encodeURIComponent(currentScanId)}/report`
+            );
 
-        const exportData = {
-            ...reportSummary,
-            findings: currentReport.findings || [],
-            investigations: currentReport.investigations || [],
-            proofloop_records: currentReport.proofloop_records || [],
-            controlled_reproduction: currentReport.controlled_reproduction || null,
-        };
+            const exportData = {
+                ...reportSummary,
+                findings: currentReport.findings || [],
+                investigations: currentReport.investigations || [],
+                proofloop_records: currentReport.proofloop_records || [],
+                controlled_reproduction:
+                    currentReport.controlled_reproduction || null,
+                fix_workflow: currentReport.fix_workflow || null,
+                fix_verified: currentReport.fix_verified === true,
+                original_modified:
+                    currentReport.original_modified ?? false,
+            };
 
-        const blob = new Blob(
-            [JSON.stringify(exportData, null, 2)],
-            { type: "application/json" }
-        );
+            const blob = new Blob(
+                [JSON.stringify(exportData, null, 2)],
+                { type: "application/json" }
+            );
 
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = `securitysense-report-${currentScanId}.json`;
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-        URL.revokeObjectURL(url);
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
 
-        setMessage("JSON report prepared for download.", "success");
-    } catch (error) {
-        setMessage(error.message || "Could not export the report.", "error");
-    } finally {
-        button.disabled = false;
-    }
-});
+            link.href = url;
+            link.download =
+                `securitysense-report-${currentScanId}.json`;
+
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+
+            URL.revokeObjectURL(url);
+
+            setMessage("JSON report prepared for download.", "success");
+        } catch (error) {
+            setMessage(
+                error.message || "Could not export the report.",
+                "error"
+            );
+        } finally {
+            button.disabled = false;
+        }
+    });
 
 checkApiStatus();
