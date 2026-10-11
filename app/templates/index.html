@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0b1020">
+    <meta name="description"
+        content="SecuritySense: evidence-driven security analysis with controlled reproduction and traceable verification.">
+    <title>SecuritySense — ProofLoop Security Analysis</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <script src="/static/js/app.js" defer></script>
+</head>
+
+<body>
+    <header class="topbar">
+        <a class="brand" href="/" aria-label="SecuritySense home">
+            <span class="brand-mark">S</span>
+            <span>SecuritySense</span>
+        </a>
+        <div class="topbar-right">
+            <span class="status-dot"></span>
+            <span id="api-status">Checking API...</span>
+            <a class="docs-link" href="/docs" target="_blank" rel="noopener noreferrer">API Docs ↗</a>
+        </div>
+    </header>
+
+    <main class="container">
+        <section class="hero">
+            <p class="eyebrow">EVIDENCE-DRIVEN APPLICATION SECURITY</p>
+            <h1>Find it. Prove it. Fix it.<br><span>Prove the fix.</span></h1>
+            <p class="hero-description">
+                Security findings are only the beginning. SecuritySense connects
+                code evidence, controlled reproduction, proposed fixes and
+                actual verification results in one traceable workflow.
+            </p>
+            <div class="hero-tags">
+                <span>Python analysis</span>
+                <span>Controlled reproduction</span>
+                <span>ProofLoop evidence</span>
+            </div>
+        </section>
+
+        <section class="panel scan-panel" aria-labelledby="scan-heading">
+            <div class="section-heading">
+                <div>
+                    <p class="eyebrow">GET STARTED</p>
+                    <h2 id="scan-heading">Run a security analysis</h2>
+                </div>
+                <span class="demo-badge">CONTROLLED DEMO</span>
+            </div>
+
+            <p class="muted">
+                This version scans the server-configured demonstration workspace.
+                It does not accept arbitrary repository URLs yet.
+            </p>
+
+            <form id="scan-form">
+                <label for="workspace">Workspace</label>
+                <select id="workspace" name="workspace">
+                    <option value="demo">SecuritySense demonstration fixtures</option>
+                </select>
+
+                <div class="form-grid">
+                    <div>
+                        <label for="max-files">Maximum Python files</label>
+                        <input id="max-files" name="max_files" type="number" min="1" max="500" value="100" required>
+                    </div>
+                    <div>
+                        <label for="context-lines">Source context lines</label>
+                        <input id="context-lines" name="context_lines" type="number" min="0" max="10" value="3"
+                            required>
+                    </div>
+                </div>
+
+                <button id="scan-button" type="submit">
+                    <span id="scan-button-text">Run security analysis</span>
+                    <span aria-hidden="true"> →</span>
+                </button>
+            </form>
+
+            <p id="scan-message" class="message" role="status" aria-live="polite">
+                Ready to scan the demonstration workspace.
+            </p>
+        </section>
+
+        <section id="results-section" class="results-section" hidden>
+            <div class="section-heading results-heading">
+                <div>
+                    <p class="eyebrow">ANALYSIS RESULTS</p>
+                    <h2>Security report</h2>
+                </div>
+                <button id="refresh-button" class="secondary-button" type="button">
+                    Refresh results
+                </button>
+            </div>
+
+            <div class="stats-grid">
+                <article class="stat-card">
+                    <span>Findings</span>
+                    <strong id="stat-findings">—</strong>
+                </article>
+                <article class="stat-card">
+                    <span>Files scanned</span>
+                    <strong id="stat-files">—</strong>
+                </article>
+                <article class="stat-card">
+                    <span>Investigations</span>
+                    <strong id="stat-investigations">—</strong>
+                </article>
+                <article class="stat-card">
+                    <span>Scan status</span>
+                    <strong id="stat-status" class="status-value">—</strong>
+                </article>
+            </div>
+
+            <div class="panel">
+                <div class="section-heading">
+                    <h2>ProofLoop</h2>
+                    <span class="muted">Evidence, not assumptions</span>
+                </div>
+                <div class="proofloop-grid">
+                    <article class="proof-step">
+                        <span class="step-number">01</span>
+                        <h3>Find</h3>
+                        <p>Detect candidate security issues.</p>
+                        <strong id="proof-find">Pending</strong>
+                    </article>
+                    <article class="proof-step">
+                        <span class="step-number">02</span>
+                        <h3>Investigate</h3>
+                        <p>Collect source-level evidence.</p>
+                        <strong id="proof-investigate">Pending</strong>
+                    </article>
+                    <article class="proof-step">
+                        <span class="step-number">03</span>
+                        <h3>Reproduce</h3>
+                        <p>Run the controlled demonstration.</p>
+                        <strong id="proof-reproduce">Pending</strong>
+                    </article>
+                    <article class="proof-step">
+                        <span class="step-number">04</span>
+                        <h3>Fix & verify</h3>
+                        <p>Report the actual fix and test status.</p>
+                        <strong id="proof-verify">Pending</strong>
+                    </article>
+                </div>
+                <p class="notice">
+                    A controlled demonstration is separate from exploitability
+                    of a finding in the scanned workspace. Unrun checks remain
+                    explicitly unrun.
+                </p>
+            </div>
+
+            <div class="panel">
+                <div class="section-heading">
+                    <h2>Detected findings</h2>
+                    <span id="finding-count-label" class="muted">0 findings</span>
+                </div>
+                <div id="findings-list" class="findings-list">
+                    <p class="muted">No results loaded yet.</p>
+                </div>
+            </div>
+
+            <div class="panel">
+                <div class="section-heading">
+                    <h2>Investigation evidence</h2>
+                </div>
+                <div id="investigations-list" class="investigations-list">
+                    <p class="muted">No investigation evidence loaded yet.</p>
+                </div>
+            </div>
+
+            <div class="panel report-panel">
+                <div>
+                    <p class="eyebrow">PORTABLE REPORT</p>
+                    <h2>Keep the evidence</h2>
+                    <p class="muted">
+                        Export the current report as JSON for inspection or documentation.
+                    </p>
+                </div>
+                <button id="download-report" class="secondary-button" type="button">
+                    Download JSON report
+                </button>
+            </div>
+
+            <details class="panel raw-panel">
+                <summary>View raw API response</summary>
+                <pre id="raw-report"></pre>
+            </details>
+        </section>
+
+        <footer>
+            <span>SecuritySense · ProofLoop</span>
+            <span>Findings require evidence and validation.</span>
+        </footer>
+    </main>
+</body>
+
+</html>

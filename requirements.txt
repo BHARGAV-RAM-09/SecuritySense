@@ -1,0 +1,6 @@
+
+fastapi
+uvicorn
+bandit
+pytest
+httpx2
